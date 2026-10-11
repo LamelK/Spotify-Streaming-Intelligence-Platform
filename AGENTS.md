@@ -2,9 +2,20 @@
 
 ## What this project is
 
-Portfolio project: **fake Spotify streaming events → Kafka → streaming ETL → database / data warehouse → analytics → LLM**.
+Portfolio project: **fake Spotify streaming events → Kafka → streaming ETL → analytics database → dashboards → (later) LLM**.
 
-**Status: Stage 0 done.** EventSim (third-party, at `~/eventsim`) builds and runs on Java 21 and streams into Kafka 4.3.1. No project code of our own yet.
+**Status: Stage 0 done; the target architecture was adopted 2026-10-11.** EventSim (third-party, at `~/eventsim`) builds and runs on Java 21 and streams into Kafka 4.3.1, and our `consumer.py` peeks at that stream.
+
+**Target architecture (current plan):**
+
+```text
+EventSim → Kafka (spotify-events)
+   ├─ Kafka Connect object-store sink → MinIO                    (durable raw archive)
+   └─ PyFlink → Kafka (spotify-events-processed)
+                → Kafka Connect ClickHouse sink → ClickHouse → dbt → dashboard
+```
+
+The approved stack is therefore **Kafka + Kafka Connect + PyFlink + MinIO + ClickHouse + dbt + one dashboard app**, with **Python 3.12** as the project language. Freshness targets: Live page 30–60 s; Analytics page on a 5-minute dbt schedule. Full decisions and the phase plan: [`plan/CHECKPOINT.md`](./plan/CHECKPOINT.md).
 
 ## Commands (verified working 2026-09-24)
 
@@ -82,9 +93,10 @@ Rules:
 
 ## Scope control
 
-- Default stack for now: **Kafka + Python + PostgreSQL**. That is enough.
-- Do **not** introduce Spark, Flink, Airflow, Docker, dbt, cloud services, etc. just because they are common in data engineering. If one would genuinely help, explain in two sentences what it adds and what it costs, recommend an option, then ask.
+- **Approved stack (2026-10-11):** Kafka, Kafka Connect, PyFlink, MinIO, ClickHouse, dbt, one dashboard app — plus Python 3.12. These were chosen deliberately with the user; do not ask again to introduce them.
+- Do **not** add anything *else* (Spark, Airflow, Docker, cloud services, extra databases, another orchestrator, …) just because it is common in data engineering. If one would genuinely help, explain in two sentences what it adds and what it costs, recommend an option, then ask.
 - Add a new technology or library only when the current stage actually needs it.
+- Build in the phase order from `plan/CHECKPOINT.md` (P0–P7): one working, tested slice at a time.
 - Priority order: **Understand → Build → Test → Improve**, never *install everything → get confused*.
 
 ## Honesty
