@@ -23,12 +23,13 @@ Kafka's data now lives in `~/kafka/kafka_2.13-4.3.1/data/kraft-combined-logs` (m
 
 ### 2. Start the stream / producer (leave it running)
 ```bash
-cd ~/eventsim
-./bin/eventsim -c examples/example-config.json --continuous --nusers 1800 \
+~/Spotify-Streaming-Intelligence-Platform/eventsim/bin/eventsim -c examples/example-config.json --continuous --nusers 1800 \
   --start-time "$(date '+%Y-%m-%dT%H:%M:%S')" \
   --end-time 2099-01-01T00:00:00 \
   --kafkaBrokerList localhost:9092 --kafkaTopic spotify-events
 ```
+The launcher works from any directory (it `cd`s into `eventsim/` itself). The
+`data/*.gz` files must exist in `eventsim/data/` — they are not committed.
 - `--continuous` = real-time pace. Without it, EventSim dumps every event instantly (a burst).
 - `--end-time 2099-01-01` = far future, so it never stops on its own → runs until Ctrl+C.
 - `--nusers 1800` ≈ 2 events/sec. (Lower it for a slower stream.)

@@ -4,31 +4,31 @@
 
 Portfolio project: **fake Spotify streaming events → Kafka → streaming ETL → analytics database → dashboards → (later) LLM**.
 
-**Status: Stage 0 done; the target architecture was adopted 2026-10-11.** EventSim (third-party, at `~/eventsim`) builds and runs on Java 21 and streams into Kafka 4.3.1, and our `consumer.py` peeks at that stream.
+**Status: Stage 0 done; the target architecture was adopted 2026-10-11.** EventSim builds and runs on Java 21 and streams into Kafka 4.3.1, and our `consumer.py` peeks at that stream. EventSim is now **vendored** in [`eventsim/`](./eventsim) — a patched copy of the third-party simulator. That copy, not the old clone at `~/eventsim`, is the source of truth.
 
 **Target architecture (current plan):**
 
 ```text
 EventSim → Kafka (spotify-events)
-   ├─ Kafka Connect object-store sink → MinIO                    (durable raw archive)
+   ├─ Kafka Connect object-store sink → RustFS                   (durable raw archive)
    └─ PyFlink → Kafka (spotify-events-processed)
                 → Kafka Connect ClickHouse sink → ClickHouse → dbt → dashboard
 ```
 
-The approved stack is therefore **Kafka + Kafka Connect + PyFlink + MinIO + ClickHouse + dbt + one dashboard app**, with **Python 3.12** as the project language. Freshness targets: Live page 30–60 s; Analytics page on a 5-minute dbt schedule. Full decisions and the phase plan: [`plan/CHECKPOINT.md`](./plan/CHECKPOINT.md).
+The approved stack is therefore **Kafka + Kafka Connect + PyFlink + RustFS + ClickHouse + dbt + one dashboard app**, with **Python 3.12** as the project language. Freshness targets: Live page 30–60 s; Analytics page on a 5-minute dbt schedule. Full decisions and the phase plan: [`plan/CHECKPOINT.md`](./plan/CHECKPOINT.md).
 
 ## Commands (verified working 2026-09-24)
 
-Build EventSim:
+Build EventSim (only needed after changing the Scala source — the built jar is committed in `eventsim/dist/`):
 ```bash
-cd ~/eventsim
+cd ~/Spotify-Streaming-Intelligence-Platform/eventsim
 sbt assembly
+cp target/scala-2.12/eventsim-assembly-1.0.jar dist/
 ```
 
 Run EventSim (no Kafka):
 ```bash
-cd ~/eventsim
-./bin/eventsim -c examples/example-config.json --from 1 --to 0 --nusers 2
+~/Spotify-Streaming-Intelligence-Platform/eventsim/bin/eventsim -c examples/example-config.json --from 1 --to 0 --nusers 2
 ```
 
 Start Kafka 4.3.1 (KRaft, single node):
@@ -45,9 +45,9 @@ bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic spotify-e
 
 Stream into Kafka:
 ```bash
-cd ~/eventsim
-./bin/eventsim -c examples/example-config.json --from 14 --to 0 --nusers 50 --kafkaBrokerList localhost:9092 --kafkaTopic spotify-events
+~/Spotify-Streaming-Intelligence-Platform/eventsim/bin/eventsim -c examples/example-config.json --from 14 --to 0 --nusers 50 --kafkaBrokerList localhost:9092 --kafkaTopic spotify-events
 ```
+The launcher `cd`s into `eventsim/` itself, so it works from any directory. The 71 MB of `data/*.gz` input files are **not** committed (they are `.gitignore`d); see [`eventsim/PATCHES.md`](./eventsim/PATCHES.md).
 
 Consume to verify:
 ```bash
@@ -93,7 +93,7 @@ Rules:
 
 ## Scope control
 
-- **Approved stack (2026-10-11):** Kafka, Kafka Connect, PyFlink, MinIO, ClickHouse, dbt, one dashboard app — plus Python 3.12. These were chosen deliberately with the user; do not ask again to introduce them.
+- **Approved stack (2026-10-11, archive updated 2026-10-17):** Kafka, Kafka Connect, PyFlink, RustFS, ClickHouse, dbt, one dashboard app — plus Python 3.12. These were chosen deliberately with the user; do not ask again to introduce them.
 - Do **not** add anything *else* (Spark, Airflow, Docker, cloud services, extra databases, another orchestrator, …) just because it is common in data engineering. If one would genuinely help, explain in two sentences what it adds and what it costs, recommend an option, then ask.
 - Add a new technology or library only when the current stage actually needs it.
 - Build in the phase order from `plan/CHECKPOINT.md` (P0–P7): one working, tested slice at a time.

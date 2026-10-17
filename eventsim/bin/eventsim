@@ -1,0 +1,7 @@
+#! /bin/bash
+# Run the packaged jar from this checkout, whatever the current directory is.
+# EventSim loads its data files with relative paths, so we cd into the project root.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$HERE" || exit 1
+exec java -XX:+UseG1GC -XX:+UseStringDeduplication -Xmx1G \
+  -jar "$HERE/dist/eventsim-assembly-1.0.jar" "$@"

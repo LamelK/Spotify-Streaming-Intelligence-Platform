@@ -1,0 +1,13 @@
+# Build output (only produced when rebuilding with sbt)
+target/
+project/target/
+project/project/
+.bsp/
+.cache/
+lib_managed/
+
+# Large input data — fetched by setup.sh, not committed
+data/*.gz
+
+# OS junk
+.DS_Store

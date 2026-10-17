@@ -5,6 +5,12 @@ __pycache__/
 venv/
 .env
 
+# Local tool downloads (JDK fetched by setup.sh)
+.tools/
+
+# Runtime logs
+.run/
+
 # OS / editor
 .DS_Store
 .idea/
